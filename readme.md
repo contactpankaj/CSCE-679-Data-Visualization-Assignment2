@@ -1,14 +1,44 @@
-# CSCE-679-Data-Visualization-Assignment2
+# CSCE-679 Data Visualization - Assignment 2
 
-## Level 1 & 2 (Basic): [Link](./level1.md)
-HK Temperature Heatmap
-![level1](./level1.png)
+## Introduction
+This project is a data visualization assignment for CSCE-679.
 
-## Grading:
-1. Correctness (50%): The data visualizations generated should look the same.
-2. Redability (30%): The code should be human-readable (i.e., the name of the variables and functions should be intuitive, and there should be enough comments).
-3. Maintainability (20%): The code should be modulized and easily modified.
+## Prerequisites
+Ensure you have the following installed on your system:
+- [Node.js](https://nodejs.org/)
+- [`http-server`](https://www.npmjs.com/package/http-server) 
 
-## Submission:
+## Installation and Running the Project
 
-Please create a github repository under your github account, and submit the URL of that repository to Canvas.
+### Step 1: Clone the Repository
+```sh
+git clone <repository-url>
+cd <repository-folder>
+```
+
+### Step 2: Start the Server
+If `http-server` is already installed, run:
+```sh
+http-server -p 8000
+```
+
+If `http-server` is not installed, install it first:
+```sh
+npm install -g http-server
+```
+Then, start the server using:
+```sh
+http-server -p 8000
+```
+
+### Step 3: Open the Application
+Visit the following link in your browser:
+```
+http://127.0.0.1:8000
+```
+
+## Using the Application
+On the home page, you will see three links. Click on any link to select the type of visualization you want to explore.
+
+
+
