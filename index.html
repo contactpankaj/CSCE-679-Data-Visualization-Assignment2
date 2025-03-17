@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Visualization</title>
+    
+    <!-- Including D3.js library for data visualization -->
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        #container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        /* Style for buttons */
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #visualization {
+            margin-top: 20px;
+            width: 100%;
+            height: 600px;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <button id="heatmapBtn">Level 1: Max temperature Heatmap</button>
+        <button id="minheatMapBtn">Level 1: Min temperature HeatMap</button>
+        <button id="minMaxBtn">Level 2: Min-Max temperature Line Chart</button>
+        
+    </div>
+    <!-- Creating Container where the visualization will be displayed -->
+    <div id="visualization"></div>
+
+    <script>
+        // creating Event listener for the Max Heatmap button
+        document.getElementById("heatmapBtn").addEventListener("click", function () {
+            document.getElementById("visualization").innerHTML = '<iframe src="heatmap.html"></iframe>';
+        });
+        // creating Event listener for the Max Heatmap button
+        document.getElementById("minheatMapBtn").addEventListener("click", function () {
+            document.getElementById("visualization").innerHTML = '<iframe src="heatmapmin.html"></iframe>';
+        });
+        // creating Event listener for the Min-Max line chart Visualization button
+        document.getElementById("minMaxBtn").addEventListener("click", function () {
+        document.getElementById("visualization").innerHTML = '<iframe src="min_max_chart.html"></iframe>';
+    });
+    </script>
+</body>
+</html>

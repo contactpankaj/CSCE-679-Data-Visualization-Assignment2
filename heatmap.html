@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Level 1: Maximum Temperature HeatMap</title>
+
+    <!-- Loading D3.js library -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        td, th {
+            border: 1px solid black;
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+        }
+        .legend-svg {
+            margin-top: 10px;
+        }
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            visibility: hidden;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h2>Level 1: Maximum Temperature HeatMap</h2>
+    <div id="heatmap"></div>
+    <div id="legend"></div>
+    <div id="tooltip" class="tooltip"></div>
+
+    <script>
+        // Loading temperature data from CSV file
+        d3.csv("temperature_daily.csv").then(function(data) {
+            let monthlyData = {}; // Dictionary to store monthly temperature data
+            
+            data.forEach(d => {
+                let date = new Date(d.date);
+                let year = date.getFullYear();
+                let month = date.getMonth();
+                if (year < 1997) return; 
+                let maxTemp = parseFloat(d.max_temperature);
+                let minTemp = parseFloat(d.min_temperature);
+                
+                if (!monthlyData[year]) monthlyData[year] = {};
+                if (!monthlyData[year][month]) monthlyData[year][month] = [];
+                
+                monthlyData[year][month].push({ maxTemp, minTemp });
+            });
+
+            let years = Object.keys(monthlyData).sort();
+            let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            let heatmapData = [];
+            
+            // Tracking global min/max temperatures for color scaling
+            let minTempGlobal = Infinity, maxTempGlobal = -Infinity;
+            
+            // Computing min and max temperatures for each year-month combination
+            years.forEach(year => {
+                months.forEach((_, monthIdx) => {
+                    if (monthlyData[year][monthIdx]) {
+                        let min = d3.min(monthlyData[year][monthIdx], d => d.minTemp);
+                        let max = d3.max(monthlyData[year][monthIdx], d => d.maxTemp);
+    
+                        heatmapData.push({ year, month: monthIdx, min, max });
+                        minTempGlobal = Math.min(minTempGlobal, min);
+                        maxTempGlobal = Math.max(maxTempGlobal, max);
+                    }
+                });
+            });
+            console.log("Final Heatmap Data max:", heatmapData);  // Logging the final heatmap data
+
+            let colorScale = d3.scaleSequential(d3.interpolateYlOrRd).domain([minTempGlobal, maxTempGlobal]);
+
+            // Creating a table for the heatmap
+            let table = d3.select("#heatmap").append("table");
+
+            // Creating the table header
+            let header = table.append("thead").append("tr");
+            header.append("th").text("Month");
+            years.forEach(year => header.append("th").text(year));
+
+            // Create table body and populating it with heatmap data
+            let tbody = table.append("tbody");
+            months.forEach((month, monthIdx) => {
+                let row = tbody.append("tr");
+                row.append("td").text(month);
+                years.forEach(year => {
+                    let cell = row.append("td");
+                    let entry = heatmapData.find(d => d.year == year && d.month == monthIdx);
+                    if (entry) {
+                        // Applng background color based on max temperature
+                        cell.style("background-color", colorScale(entry.max))
+                            .on("mouseover", function(event) {
+                                // Showing tooltip with temperature details on hover
+                                d3.select("#tooltip")
+                                    .style("visibility", "visible")
+                                    .html(`
+                                        <strong>${months[monthIdx]} ${year}</strong><br>
+                                        Max Temp: ${entry.max.toFixed(1)}°C<br>
+                                        Min Temp: ${entry.min.toFixed(1)}°C
+                                    `);
+                            })
+                            .on("mousemove", function(event) {
+                                d3.select("#tooltip")
+                                    .style("top", (event.pageY + 10) + "px")
+                                    .style("left", (event.pageX + 10) + "px");
+                            })
+                            .on("mouseout", function() {
+                                d3.select("#tooltip").style("visibility", "hidden");
+                            });
+                    }
+                });
+            });
+             // Creating a color legend for the heatmap
+            const legendWidth = 300;
+            const legendHeight = 20;
+
+            const legendSvg = d3.select("#legend")
+                .append("svg")
+                .attr("width", legendWidth + 40)
+                .attr("height", 50)
+                .attr("class", "legend-svg");
+
+            legendSvg.append("text")
+                .attr("x", legendWidth / 2)
+                .attr("y", 15)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "14px")
+                .attr("font-weight", "bold")
+                .text("Minimum Temperature Scale");
+
+            const legendScale = d3.scaleLinear()
+                .domain([minTempGlobal, maxTempGlobal])
+                .range([0, legendWidth]);
+
+            const legendGradient = legendSvg.append("defs")
+                .append("linearGradient")
+                .attr("id", "legend-gradient")
+                .attr("x1", "0%").attr("y1", "0%")
+                .attr("x2", "100%").attr("y2", "0%");
+
+            const numStops = 10;
+            const legendStops = d3.range(numStops).map(d => d / (numStops - 1));
+
+            legendStops.forEach((stop, i) => {
+                legendGradient.append("stop")
+                    .attr("offset", `${stop * 100}%`)
+                    .attr("stop-color", colorScale(minTempGlobal + stop * (maxTempGlobal - minTempGlobal)));
+            });
+
+            legendSvg.append("rect")
+                .attr("x", 20)
+                .attr("width", legendWidth)
+                .attr("height", legendHeight)
+                .style("fill", "url(#legend-gradient)");
+
+            const legendAxis = d3.axisBottom(legendScale)
+                .ticks(5)
+                .tickFormat(d => d.toFixed(1));
+
+            legendSvg.append("g")
+                .attr("transform", `translate(20, ${legendHeight})`)
+                .call(legendAxis);
+
+        });
+    </script>
+</body>
+</html>

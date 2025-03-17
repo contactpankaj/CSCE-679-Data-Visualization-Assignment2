@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Level 2: Temperature Heatmap with Line Charts</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Styling for table, cells, and tooltips */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        td, th {
+            border: 1px solid black;
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+            position: relative;
+            width: 100px;
+            height: 100px;
+        }
+        .line-chart {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            visibility: hidden;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h2>Level 2: Temperature Heatmap with Line Charts</h2>
+    <div id="legend"></div>
+    <div id="heatmap"></div>
+    <div id="tooltip" class="tooltip"></div>
+    
+    <script>
+        // Loading the CSV file containing temperature data
+        d3.csv("temperature_daily.csv").then(function(data) {
+            let heatmapData = {};
+            let minTempOverall = Infinity, maxTempOverall = -Infinity;
+
+            // Parsing data and organize it by year and month
+            data.forEach(d => {
+                let date = new Date(d.date);
+                let year = date.getFullYear();
+                if (year < 2008 || year > 2017) return; 
+                let month = date.getMonth();
+                let day = date.getDate();
+                let maxTemp = parseFloat(d.max_temperature);
+                let minTemp = parseFloat(d.min_temperature);
+
+                if (!heatmapData[year]) heatmapData[year] = {};
+                if (!heatmapData[year][month]) heatmapData[year][month] = [];
+                
+                heatmapData[year][month].push({ day, maxTemp, minTemp });
+
+                minTempOverall = Math.min(minTempOverall, minTemp);
+                maxTempOverall = Math.max(maxTempOverall, maxTemp);
+            });
+
+            console.log("minmax Heatmap Data:", heatmapData);  // Logging the final heatmap data
+
+            let colorScale = d3.scaleSequential(d3.interpolateYlOrRd).domain([minTempOverall, maxTempOverall]);
+            let years = Object.keys(heatmapData).sort();
+            let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            
+            // Creating table structure
+            let table = d3.select("#heatmap").append("table");
+            let header = table.append("thead").append("tr");
+            header.append("th").text("Month");
+            years.forEach(year => header.append("th").text(year));
+
+            let tbody = table.append("tbody");
+            months.forEach((month, monthIdx) => {
+                let row = tbody.append("tr");
+                row.append("td").text(month);
+                years.forEach(year => {
+                    let cell = row.append("td");
+                    let entry = heatmapData[year] ? heatmapData[year][monthIdx] : null;
+                    if (entry) {
+                        let minTemp = d3.min(entry, d => d.minTemp);
+                        let maxTemp = d3.max(entry, d => d.maxTemp);
+
+                        cell.style("background-color", colorScale((minTemp + maxTemp) / 2))
+                            .on("mouseover", function(event) {
+                                d3.select("#tooltip")
+                                    .style("visibility", "visible")
+                                    .style("top", (event.pageY - 10) + "px")
+                                    .style("left", (event.pageX + 10) + "px")
+                                    .html(`<strong>${month} ${year}</strong><br>
+                                           Min Temp: ${minTemp.toFixed(1)}°C<br>
+                                           Max Temp: ${maxTemp.toFixed(1)}°C`);
+                            })
+                            .on("mouseout", function() {
+                                d3.select("#tooltip").style("visibility", "hidden");
+                            });
+                        // Creating mini line charts inside cells
+                        let svg = cell.append("svg")
+                            .attr("class", "line-chart")
+                            .attr("viewBox", "0 0 100 100")
+                            .attr("preserveAspectRatio", "none");
+
+                        let xScale = d3.scaleLinear().domain([1, 31]).range([5, 95]);
+                        let yScale = d3.scaleLinear()
+                            .domain([minTemp, maxTemp])
+                            .range([95, 5]);
+
+                        let maxLine = d3.line()
+                            .x(d => xScale(d.day))
+                            .y(d => yScale(d.maxTemp));
+                        
+                        let minLine = d3.line()
+                            .x(d => xScale(d.day))
+                            .y(d => yScale(d.minTemp));
+                        
+                        svg.append("path")
+                            .datum(entry)
+                            .attr("fill", "none")
+                            .attr("stroke", "green")
+                            .attr("stroke-width", 1.5)
+                            .attr("d", maxLine);
+
+                        svg.append("path")
+                            .datum(entry)
+                            .attr("fill", "none")
+                            .attr("stroke", "grey")
+                            .attr("stroke-width", 1.5)
+                            .attr("d", minLine);
+                    }
+                });
+            });
+        // Heatmap Legend
+        const legendWidth = 300;
+        const legendHeight = 80;
+        const legendSvg = d3.select("#legend")
+            .append("svg")
+            .attr("width", legendWidth)
+            .attr("height", 70);
+
+        legendSvg.append("text")
+            .attr("x", legendWidth / 2)
+            .attr("y", 15)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "14px")
+            .attr("font-weight", "bold")
+            .text("Heatmap Temperature Scale");
+
+        const legendScale = d3.scaleLinear()
+            .domain([minTempOverall, maxTempOverall])
+            .range([0, legendWidth]);
+
+        const legendGradient = legendSvg.append("defs")
+            .append("linearGradient")
+            .attr("id", "legend-gradient")
+            .attr("x1", "0%").attr("y1", "0%")
+            .attr("x2", "100%").attr("y2", "0%");
+
+        d3.range(10).forEach((d, i) => {
+            legendGradient.append("stop")
+                .attr("offset", `${i * 10}%`)
+                .attr("stop-color", colorScale(minTempOverall + i * (maxTempOverall - minTempOverall) / 10));
+        });
+
+        legendSvg.append("rect")
+            .attr("width", legendWidth)
+            .attr("height", legendHeight)
+            .attr("y", 20)
+            .style("fill", "url(#legend-gradient)");
+
+        legendSvg.append("g")
+            .attr("transform", `translate(0, 40)`)
+            .call(d3.axisBottom(legendScale).ticks(5).tickFormat(d3.format(".1f")));
+
+        // Line Chart Legends for Max and Min Temp
+        let lineLegend = d3.select("#legend")
+                .append("div")
+                .style("display", "flex")
+                .style("gap", "50px")
+                .style("margin-top", "50px");
+
+            lineLegend.append("div")
+                .style("display", "flex")
+                .style("align-items", "center")
+                .html(`<div style="width: 20px; height: 3px; background-color: green; margin-right: 5px;"></div> Max Temperature`);
+
+            lineLegend.append("div")
+                .style("display", "flex")
+                .style("align-items", "center")
+                .html(`<div style="width: 20px; height: 3px; background-color: grey; margin-right: 5px;"></div> Min Temperature`);
+
+
+        });
+    </script>
+</body>
+</html>
